@@ -1,0 +1,48 @@
+﻿@page "/{UserId?}"
+@inject ProtectedSessionStorage _sessionStorage
+@inject AuthenticationStateProvider _authProvider
+@inject IUserData _userData
+@inject IStringLocalizer<App> _translation
+@inject IDialogService _dialogService
+@inject IPlaylistData _playlistData
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+
+<MudContainer Class="mt-7 px-8" MaxWidth="MaxWidth.False">
+
+    <MudGrid>
+        <MudItem>
+             <MudPaper Elevation="0" Style="height: auto;">
+             <MudImage Src="/Images/header.png" Height="300" />
+            </MudPaper>
+    </MudItem>
+    
+</MudGrid>
+
+<Playlists PlaylistsList="@playlists"/>
+</MudContainer>
+
+
+
+@code {
+
+    private string _state = "Message box hasn't been opened yet";
+
+    [Parameter]
+    public string? UserId {get; set; }
+
+    private List<PlaylistModel> playlists { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        playlists = await _playlistData.GetAllPlaylists();
+    }
+    private async void OnButtonClicked()
+    {
+        bool? result = await _dialogService.ShowMessageBox(
+            _translation["Warning"], 
+            "Deleting can not be undone!", 
+            yesText:"Delete!", cancelText:"Cancel");
+        _state= result==null ? "Cancelled" : "Deleted!";
+        StateHasChanged();
+    }
+}

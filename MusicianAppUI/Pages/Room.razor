@@ -1,0 +1,131 @@
+﻿@page "/Room/{id?}"
+@using MusicianAppUI.Components.Dialogs
+@attribute [Authorize]
+@inject AuthenticationStateProvider _authProvider
+@inject IUserData _userData
+@inject IStringLocalizer<App> _localizer
+@inject IRoomData _roomData
+@inject NavigationManager _navManager
+@inject IDialogService _dialogService
+@inject ISnackbar _snackbar
+
+@if (roomModel != null)
+{
+    <MudContainer Class="d-flex flex-column justify-start ma-2">
+        <MudPaper Class="d-flex flex-row justify-end flex-grow-1 gap-4 pa-2" Elevation="0">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="(() => edit=false)"/>
+        </MudPaper>
+        
+        <MudPaper Class="d-flex flex-column flex-grow-1 gap-4 pa-2" Elevation="0">
+            <MudText Typo="Typo.h3">@roomModel.Name</MudText>
+            <MudImage Src=@SetImageSrc(roomModel.ImageUrl) Width="100" Height="100" Elevation="25"/>
+            <MudText Typo="Typo.h4">
+            @foreach (var user in invitedUsers)
+            {
+               @user.UserDisplayName
+               @space
+            }
+            </MudText>
+            <MudTextField @bind-Value="roomModel.Description" Label="Description" Variant="Variant.Text" Disabled="@edit"></MudTextField>
+        </MudPaper>  
+        
+    <MudDivider />  
+    <MudGrid Justify="Justify.FlexStart" class="pr-2">
+    @foreach (var track in tracksList)
+    {
+        <MudItem xs="6">
+
+            <MudCard @onclick="@(()=>OpenTrack(track))">
+                <MudCardActions >
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Primary" OnClick="(e => DeleteTrack(track))" />
+                </MudCardActions>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.body1">
+                            @track.TrackName
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                        @foreach (var artist in track.TrackArtists)
+                        {
+                            @artist.UserDisplayName 
+                            @space
+                        }
+                        </MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                
+                <MudCardContent>
+                        <MudImage Src=@SetImageSrc(track.TrackImageUrl) Width="100" Height="100" Elevation="25"/>
+                </MudCardContent>
+                
+            </MudCard>
+
+        </MudItem>
+    }
+
+</MudGrid>
+</MudContainer>
+}
+@code {
+
+    private string space = " ";
+
+    private bool edit = true;
+
+    private UserModel _loggedInUser;
+
+    [Parameter]
+    public string? id { get; set; }
+
+    private RoomModel roomModel { get; set; } = new();
+
+    private List<ListUserModel> invitedUsers { get; set; } = new();
+    private List<ListTrackModel> tracksList { get; set; } = new();
+
+    protected override async Task OnInitializedAsync(){
+
+        roomModel = await _roomData.GetRoomById(id);
+        invitedUsers = roomModel.InvitedUsers;
+        tracksList = roomModel.Tracks;
+        _loggedInUser = await _authProvider.GetUserFromAuth(_userData);
+    }
+    private async Task DeleteTrack(ListTrackModel trackModel)
+    {
+
+        var parameters = new DialogParameters
+        {
+            {"ContentText", "Do you really want to delete these records? This process cannot be undone."},
+            {"ButtonText", "Delete"},
+            {"Color", Color.Error}
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = _dialogService.Show<DialogTemplateExample_Dialog>("Delete", parameters, options);
+
+        var result = await dialog.Result;
+        if(!result.Canceled)
+        {
+            roomModel.Tracks.Remove(trackModel);
+            await _roomData.UpdateRoom(roomModel);
+            roomModel = await _roomData.GetRoomById(roomModel.Id);
+        }
+    }
+    void ShowSnackbar()
+    {
+        _snackbar.Add("Random message");
+    }
+    private void OpenTrack(ListTrackModel trackModel)
+    { 
+        _navManager.NavigateTo($"/Track/{trackModel.TrackId}");
+    }
+    private string SetImageSrc(string imageurl)
+    {
+        if (imageurl == null)
+        {
+            return _localizer["Default image path"];
+        }
+        else return imageurl;
+    }
+
+}

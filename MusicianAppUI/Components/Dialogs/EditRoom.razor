@@ -1,0 +1,56 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudTextField T="string" @bind-Value="@Room.Name" Label="Name"></MudTextField>
+        <MudText>Invite friends</MudText>
+        @foreach(var user in Friends)
+        {
+            <MudCheckBox Label="@user.UserDisplayName" Checked="@IsChecked(user.UserId)" @onchange="((e) => OnCheckBoxChange(e, user))" />
+
+        }     
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public RoomModel Room { get; set; } = new();
+
+    [Parameter] public List<ListUserModel>? Friends { get; set; } = new();
+
+    private List<ListUserModel> checkedUsers = new List<ListUserModel>();
+
+    private bool IsChecked(string Id)
+    {
+        var result = Room.InvitedUsers.Find(u => u.UserId == Id);
+        if (result != null) {
+            return true; 
+        }
+        else return false;
+    }
+    private void OnCheckBoxChange(ChangeEventArgs e, ListUserModel user)
+    {
+        if ((bool)e.Value)
+        {
+            Room.InvitedUsers.Add(user);
+        }
+        else
+        {
+            Room.InvitedUsers.Remove(user);
+        }
+    }
+
+
+    void Submit() => MudDialog?.Close(DialogResult.Ok(Room));
+
+    void Cancel() => MudDialog?.Cancel();
+
+
+   
+
+}

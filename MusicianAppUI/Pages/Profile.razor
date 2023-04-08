@@ -1,0 +1,38 @@
+﻿@page "/Profile"
+@attribute [Authorize]
+@inject IStringLocalizer<App> Localizer
+@inject AuthenticationStateProvider authProvider
+@inject IInternalAuditData auditData
+@inject IUserData userData
+@inject NavigationManager navManager
+<h3>My Profile</h3>
+<LoginDisplay/>
+
+<div>
+    <div>
+        <h1>My Account</h1>
+        <p>
+            <a href="MicrosoftIdentity/Account/EditProfile">
+            Edit My Profile    
+            </a>
+        </p>
+    </div>
+</div>
+
+@code {
+    private UserModel loggedInUser;
+    private List<InternalAuditModel> submissions;
+
+    protected async override Task OnInitializedAsync()
+    {
+
+        loggedInUser = await authProvider.GetUserFromAuth(userData);
+        var results = await auditData.GetInternalAuditModel(loggedInUser.Id);
+        
+        if(loggedInUser is not null && results is not null)
+        {
+            //submissions = results.OrderByDescending(s => s.DateCreated).Tolist();
+        }
+    }
+
+}

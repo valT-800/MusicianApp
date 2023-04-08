@@ -1,0 +1,29 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudTextField T="string" @bind-Value="TextValue" Label="Name"></MudTextField>
+        <MudSelect T="string" @bind-Value="TextDescription"  Label="Favorite Coffee" AnchorOrigin="Origin.BottomCenter">
+            <MudSelectItem Value="@("Cappuccino")" />
+            <MudSelectItem Value="@("Cafe Latte")" />
+            <MudSelectItem Value="@("Espresso")" />
+            <MudSelectItem Value="@("Irish Coffee")" />
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+
+    </DialogActions>
+</MudDialog>
+@code {
+
+    public string TextValue { get; set; }
+    public string TextDescription { get; set; }
+
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    void Submit() => MudDialog.Close(DialogResult.Ok(new PlaylistModel { 
+        Name = TextValue, 
+        Description = TextDescription
+    }));
+    void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,54 @@
+﻿@page "/playlists/{UserId?}"
+@using MusicianAppUI.Components.Dialogs
+@attribute [Authorize]
+@inject AuthenticationStateProvider _authProvider
+@inject IUserData _userData
+@inject IStringLocalizer<App> Localizer
+@inject IPlaylistData _playlistData
+@inject NavigationManager _navManager
+@inject IDialogService _dialogService
+@inject ISnackbar _snackbar
+
+<MudContainer Class="d-flex justify-center mb-2">
+    <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Large" IconSize="Size.Large" Class="ma-2" @onclick="_ => CreatePlaylist()"/>
+</MudContainer>
+@if (playlists.Capacity >0)
+{
+    <Playlists PlaylistsList = "@playlists"></Playlists>
+}
+
+
+@code{
+    [Parameter]
+    public string? UserId {get; set; }
+
+    private List<PlaylistModel>? playlists { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        playlists = await _playlistData.GetUserPlaylists(UserId);
+    }
+    private async Task CreatePlaylist(){
+        // var loggedUser = authProvider.GetUserFromAuth(userData);
+
+        DialogOptions closeOnEscapeKey = new DialogOptions { CloseOnEscapeKey = true };
+
+        var dialog = _dialogService.Show<AddNewPlaylist>("Simple Dialog", closeOnEscapeKey);
+
+        var result = await dialog.Result;
+
+        if (!result.Cancelled)
+        {
+            // Playlist model casting from dialog return after accept  
+            var temp = (PlaylistModel)(result.Data ?? false);
+
+            PlaylistModel playlist = new()
+                {
+                    Name = temp.Name,
+                    Description = temp.Description
+                };
+            await _playlistData.CreatePlaylist(playlist);
+            playlists = await _playlistData.GetUserPlaylists(UserId);
+        }
+    }
+}

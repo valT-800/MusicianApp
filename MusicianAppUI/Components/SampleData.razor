@@ -1,0 +1,126 @@
+﻿@page "/SampleData"
+@attribute [Authorize]
+@inject AuthenticationStateProvider authProvider
+@inject ITrackData trackData
+@inject IPlaylistData playlistData
+@inject IRoomData roomData
+@inject IUserData userData
+<h3>SampleData</h3>
+
+
+<button class="btn btn-primary" @onclick="CreateTracks">Create Tracks</button>
+
+<button class="btn btn-primary" @onclick="CreateUser">Create User</button>
+
+
+<button class="btn btn-primary" @onclick="CreateTracks">Create Playlist</button>
+
+
+<button class="btn btn-primary" @onclick="CreateTracks">Create Room</button>
+
+<p>
+    <label>
+        Normal Blazor binding: 
+        <input @bind="InputValue" />
+    </label>
+</p>
+
+<p>
+    <label>
+        Demonstration of equivalent HTML binding: 
+        <input value="@InputValue"
+            @onchange="@((ChangeEventArgs __e) => InputValue = __e?.Value?.ToString())" />
+    </label>
+</p>
+
+<p>
+    <code>InputValue</code>: @InputValue
+</p>
+
+@if(cats != null){
+
+
+      @foreach(var track in cats)
+       {
+                <p>@track.Name</p>
+                <p>@track.Lyrics</p>
+              
+       }
+}
+
+
+@code {
+
+
+
+    private string? InputValue { get; set; }
+
+    private async Task CreateUser()
+    {
+        var loggedUser = authProvider.GetUserFromAuth(userData);
+
+        UserModel user = new()
+            {
+                Firstname = "Monika",
+                Lastname = "Oleskeviciute",
+                Email = "m@gmail.com",
+                ObjectIdentifier = "ddfdcdsgfewf"
+            };
+        await userData.CreateUser(user);
+
+    }
+
+    List<TrackModel> cats;
+
+    protected async override Task OnInitializedAsync()
+    {
+
+        var tracks = await trackData.GetAllTracks();
+        cats = tracks;
+    }
+
+
+
+    private async Task CreateCat(string a, string b)
+    {
+         TrackModel cat = new()
+            {
+                Name = a,
+                Lyrics = b
+            };
+            await trackData.CreateTrack(cat);
+    }
+
+
+
+    private async Task CreateTracks(){
+        var tracks = await trackData.GetAllTracks();
+        if(tracks?.Count > 0)
+        {
+
+            return;
+        }
+
+        TrackModel cat = new()
+            {
+                Name = "Courses",
+                Lyrics ="Full paid courses"
+            };
+            await trackData.CreateTrack(cat);
+
+             TrackModel cat2 = new()
+            {
+                Name = "Dev Questions",
+                Lyrics ="Full paid courses"
+            };
+            await trackData.CreateTrack(cat2);
+             TrackModel cat3 = new()
+            {
+                Name = "10 min train",
+                Lyrics ="Quick video tutorial"
+            };
+            await trackData.CreateTrack(cat3);
+
+    }
+
+}

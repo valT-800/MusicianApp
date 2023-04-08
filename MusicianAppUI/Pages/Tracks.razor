@@ -1,0 +1,168 @@
+﻿@page "/Tracks"
+@using MusicianAppUI.Components.Dialogs
+@attribute [Authorize]
+@inject AuthenticationStateProvider _authProvider
+@inject IUserData _userData
+@inject IStringLocalizer<App> _translation
+@inject ITrackData _trackData
+@inject NavigationManager _navManager
+@inject IDialogService _dialogService
+@inject ISnackbar _snackbar
+
+@if (TracksList != null)
+{
+    @*<MudTextField @bind-Value="TextValue" Label="Standard" Variant="Variant.Text"></MudTextField>
+<MudTextField @bind-Value="DescriptionText" T="string" Label="Outlined" Variant="Variant.Outlined" Placeholder="Description" Lines="3" />
+
+    <MudButton OnClick="CreateTrack" Variant="Variant.Filled">Create track</MudButton>
+
+
+    <MudButton OnClick="DeleteTrack" Color="Color.Error" Variant="Variant.Filled">Delete track</MudButton>
+    <MudDataGrid Items="@_tracks" MultiSelection="true" >
+    <Columns>
+        <SelectColumn T="TrackModel" />
+        <Column T="TrackModel" Field="Name" />
+        <Column T="TrackModel" Field="Lyrics" />
+    </Columns>
+</MudDataGrid>*@
+
+<MudContainer Class="d-flex justify-center mb-2">
+    <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Large" IconSize="Size.Large" Class="ma-2" @onclick="_ => CreateTrack()"/>
+</MudContainer>
+<MudGrid Justify="Justify.FlexStart" class="pr-2">
+    @foreach (var track in TracksList)
+    {
+        <MudItem xs="6">
+
+            <MudCard @onclick="@(()=>OpenTrack(track))">
+                <MudCardActions >
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="(e=>UpdateTrack(track))"/>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Primary" OnClick="(e => DeleteTrack(track.Id))" />
+                </MudCardActions>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.body1">
+                            @track.Name 
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                        @foreach (var artist in track.Artists)
+                        {
+                            @artist.UserDisplayName 
+                            @space
+                        }
+                        </MudText>
+                            
+                    </CardHeaderContent>
+                </MudCardHeader>
+                
+                <MudCardContent>
+                        <MudImage Src=@SetImageSrc(track.ImageUrl) Width="100" Height="100" Elevation="25"/>
+                </MudCardContent>
+                
+            </MudCard>
+
+        </MudItem>
+    }
+
+</MudGrid>
+
+  
+}
+
+
+@code {
+    private string space = " ";
+
+    private List<TrackModel> TracksList { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        TracksList = await _trackData.GetAllTracks();
+
+    }
+
+
+    private async Task CreateTrack(){
+
+        DialogOptions closeOnEscapeKey = new DialogOptions { CloseOnEscapeKey = true };
+
+        var dialog = _dialogService.Show<AddNewTrack>("Simple Dialog", closeOnEscapeKey);
+
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            // Track model casting from dialog return after accept  
+            var temp = (TrackModel)(result.Data ?? false);
+
+            TrackModel track = new()
+                {
+                    Name = temp.Name,
+                    Lyrics = temp.Lyrics
+                };
+            await _trackData.CreateTrack(track);
+
+            ShowSnackbar();
+            TracksList = await _trackData.GetAllTracks();
+        }
+    }
+
+    async Task UpdateTrack(TrackModel trackModel)
+    {
+
+        var parameters = new DialogParameters { ["Track"] = trackModel };
+
+        DialogOptions closeOnEscapeKey = new DialogOptions { CloseOnEscapeKey = true };
+
+        var dialog = _dialogService.Show<EditTrack>("Edit Dialog", parameters, closeOnEscapeKey);
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            var temp = (TrackModel)(result.Data ?? false);
+            await _trackData.UpdateTrack(temp);
+            TracksList = await _trackData.GetAllTracks();
+        }
+    }
+
+    void ShowSnackbar()
+    {
+        _snackbar.Add("Random message");
+    }
+
+
+    private async Task DeleteTrack(string id)
+    {
+
+        var parameters = new DialogParameters
+        {
+            {"ContentText", "Do you really want to delete these records? This process cannot be undone."},
+            {"ButtonText", "Delete"},
+            {"Color", Color.Error}
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = _dialogService.Show<DialogTemplateExample_Dialog>("Delete", parameters, options);
+
+        var result = await dialog.Result;
+        if(!result.Canceled)
+        {
+            await _trackData.DeleteTrack(id);
+            TracksList = await _trackData.GetAllTracks();
+        }
+    }
+    private void OpenTrack(TrackModel trackModel)
+    { 
+        _navManager.NavigateTo($"/Track/{trackModel.Id}");
+    }
+    private string SetImageSrc(string imageurl)
+    {
+        if (imageurl == null)
+        {
+            return _translation["Default image path"];
+        }
+        else return imageurl;
+    }
+
+}

@@ -1,0 +1,114 @@
+﻿@using MusicianAppUI.Components.Dialogs
+@attribute [Authorize]
+@inject AuthenticationStateProvider _authProvider
+@inject IUserData _userData
+@inject IStringLocalizer<App> Localizer
+@inject IPlaylistData _playlistData
+@inject NavigationManager _navManager
+@inject IDialogService _dialogService
+@inject ISnackbar _snackbar
+
+@if (PlaylistsList != null)
+{
+<MudGrid Justify="Justify.Center" class="pr-4 pl-4">
+    @foreach (var playlist in PlaylistsList)
+    {
+  
+        <MudItem xs="3">
+
+            <MudCard>
+                <MudCardActions >
+                    <MudIconButton Icon="@Icons.Filled.Edit" Color="Color.Primary" OnClick="(e=>UpdatePlaylist(playlist))"/>
+                    <MudIconButton Icon="@Icons.Filled.Delete" Color="Color.Primary" OnClick="(e => DeletePlaylist(playlist.Id))" />
+                </MudCardActions>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.body1">@playlist.Name </MudText>                       
+                        <MudText Typo="Typo.h6">@playlist.CreatorDisplayName</MudText>                            
+                    </CardHeaderContent>
+                </MudCardHeader>
+                 <MudCardMedia Image=@SetImageSrc(playlist.ImageUrl) Height="250" />
+                <MudCardContent>
+                    <MudText Typo="Typo.body2">@playlist.Description </MudText>
+                </MudCardContent>
+                
+            </MudCard>
+
+        </MudItem>
+
+    }
+
+</MudGrid>
+  
+}
+
+
+@code {
+    [Parameter]
+    public List<PlaylistModel> PlaylistsList { get; set; } = new();
+
+    
+
+    async Task UpdatePlaylist(PlaylistModel playlistModel)
+    {
+
+        var parameters = new DialogParameters { ["Playlist"] = playlistModel };
+        
+        DialogOptions closeOnEscapeKey = new DialogOptions { CloseOnEscapeKey = true };
+
+        var dialog = _dialogService.Show<EditPlaylist>("Edit Dialog", parameters, closeOnEscapeKey);
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            var temp = (PlaylistModel)(result.Data ?? false);
+            await _playlistData.UpdatePlaylist(temp);
+            PlaylistsList = await _playlistData.GetAllPlaylists();
+        }
+    }
+
+        void ShowSnackbar()
+    {
+        _snackbar.Add("Random message");
+    }
+
+
+    private async Task DeletePlaylist(string id)
+    {
+
+        var parameters = new DialogParameters
+        {
+            {"ContentText", "Do you really want to delete these records? This process cannot be undone."},
+            {"ButtonText", "Delete"},
+            {"Color", Color.Error}
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = _dialogService.Show<DialogTemplateExample_Dialog>("Delete", parameters, options);
+        
+        var result = await dialog.Result;
+        if(!result.Cancelled)
+        {
+            await _playlistData.DeletePlaylist(id);
+            PlaylistsList = await _playlistData.GetAllPlaylists();
+        }
+    }
+    private string SetImageSrc(string imageurl)
+    {
+        if (imageurl == null)
+        {
+            return Localizer["Default image path"];
+        }
+        else return imageurl;
+    }
+   
+}
+
+
+
+
+@* public string Id { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+  }*@

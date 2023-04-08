@@ -1,0 +1,55 @@
+﻿@inject NavigationManager _navigationManager
+@inject IConfiguration _configuration
+@inject IStringLocalizer<App> _translation
+
+<MudSelect T="string" @bind-Value="@_selectedCulture" Label="Austria not representable" Variant="Variant.Outlined">
+    @if (_cultures != null)
+    {
+        @foreach (var culture in _cultures)
+        {
+            <MudSelectItem Value="@culture.Key">
+                @culture.Value
+            </MudSelectItem>
+        }
+    }
+    </MudSelect>
+<MudButton OnClick="RequestCultureChange" Variant="Variant.Outlined">@_translation["Change"]</MudButton>
+
+
+
+
+@code {
+    private string? _selectedCulture = Thread.CurrentThread.CurrentCulture.Name;
+    private Dictionary<string, string>? _cultures;
+
+    protected override void OnInitialized()
+    {
+        _cultures = _configuration.GetSection("Cultures")
+        .GetChildren().ToDictionary(x => x.Key, x => x.Value);
+    }
+
+    private void Change(ChangeEventArgs e)
+    {
+        _selectedCulture = e.Value?.ToString();
+        RequestCultureChange();
+    }
+
+
+    private void RequestCultureChange()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedCulture))
+        {
+            return;
+        }
+
+        var uri = new Uri(_navigationManager.Uri)
+        .GetComponents(UriComponents.PathAndQuery, UriFormat.Unescaped);
+
+        var query = $"?culture={Uri.EscapeDataString(_selectedCulture)}&"+
+        $"redirectUri={Uri.EscapeDataString(uri)}";
+
+        _navigationManager.NavigateTo("/Culture/SetCulture" + query, true);
+
+    }
+
+}

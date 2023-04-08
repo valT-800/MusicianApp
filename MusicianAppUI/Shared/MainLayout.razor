@@ -1,0 +1,40 @@
+﻿@inherits LayoutComponentBase
+@inject IStringLocalizer<App> _translation
+
+<MudThemeProvider />
+<MudDialogProvider/>
+<MudSnackbarProvider/>
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        
+       
+                  <MudImage Width="32" Height="32" Src="https://i.pinimg.com/564x/de/39/8f/de398f6dcadf2281fad3a5b8168911aa.jpg" Alt="Musician app" Elevation="25" Class="rounded-lg"/>
+            <MudStack Justify="Justify.Center" Spacing="0">
+                  <MudText Typo="Typo.h5" Class="ml-3">Musician app</MudText>
+            </MudStack>
+             
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <NavMenu/>
+    </MudDrawer>
+    <MudMainContent>
+    <MudStack Row="true">
+        <MudIconButton Class="mt-4 ml-4" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h5" Class="mt-6">@_translation["Search, create and edit tracks"]
+
+</MudText>      
+        </MudStack>           
+            @Body
+    </MudMainContent>
+</MudLayout>
+@code {
+    bool _drawerOpen = true;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

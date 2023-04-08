@@ -1,0 +1,159 @@
+﻿@page "/Rooms"
+@using MusicianAppUI.Components.Dialogs
+@attribute [Authorize]
+@inject AuthenticationStateProvider _authProvider
+@inject IUserData _userData
+@inject IStringLocalizer<App> _localizer
+@inject IRoomData _roomData
+@inject NavigationManager _navManager
+@inject IDialogService _dialogService
+@inject ISnackbar _snackbar
+
+@if (RoomsList != null)
+{
+
+<MudContainer Class="d-flex justify-center mb-2">
+    <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Large" IconSize="Size.Large" Class="ma-2" @onclick="_ => CreateRoom()"/>
+</MudContainer>
+<MudGrid Justify="Justify.Center" class="pr-4 pl-4">
+    @foreach (var room in RoomsList)
+    {
+        <MudItem xs="3">
+
+            <MudCard @onclick="@(()=>OpenRoom(room))">
+                <MudCardActions >
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="(e=>UpdateRoom(room))"/>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Primary" OnClick="(e => DeleteRoom(room.Id))" />
+                </MudCardActions>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.body1">
+                            @room.Name 
+                        </MudText>
+                        
+                            
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardMedia Image=@SetImageSrc(room.ImageUrl) Height="250" />
+                <MudCardContent>
+                    <MudText Typo="Typo.body2">
+                        @_localizer["Invited users"]
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                   @foreach (var user in room.InvitedUsers)
+                      {
+                          @user.UserDisplayName 
+                          @space
+                      }
+                    </MudText>
+                </MudCardContent>
+                
+            </MudCard>
+
+        </MudItem>
+    }
+
+</MudGrid>
+  
+}
+
+
+@code {
+
+    private string space = " ";
+    private List<RoomModel> RoomsList { get; set; } = new();
+
+    private UserModel _loggedInUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loggedInUser = await _authProvider.GetUserFromAuth(_userData);
+        RoomsList = await _roomData.GetUserRooms(_loggedInUser.Id);
+    }
+
+
+
+    private async Task CreateRoom(){
+
+        DialogOptions closeOnEscapeKey = new DialogOptions { CloseOnEscapeKey = true };
+
+        var dialog = _dialogService.Show<AddNewRoom>("Simple Dialog", closeOnEscapeKey);
+
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            // Room model casting from dialog return after accept  
+            var temp = (RoomModel)(result.Data ?? false);
+
+            RoomModel room = new()
+                {
+                    Name = temp.Name,
+                    Description = temp.Description
+                };
+            await _roomData.CreateRoom(room);
+
+            ShowSnackbar();
+            RoomsList = await _roomData.GetUserRooms(_loggedInUser.Id);
+        }
+    }
+
+    async Task UpdateRoom(RoomModel roomModel)
+    {
+        var parameters = new DialogParameters { ["Room"] = roomModel, ["Friends"] = _loggedInUser.UserFriends.Friends};
+        
+        DialogOptions closeOnEscapeKey = new DialogOptions { CloseOnEscapeKey = true };
+
+        var dialog = _dialogService.Show<EditRoom>("Edit Dialog", parameters, closeOnEscapeKey);
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            var temp = (RoomModel)(result.Data ?? false);
+            await _roomData.UpdateRoom(temp);
+            RoomsList = await _roomData.GetUserRooms(_loggedInUser.Id);
+        }
+    }
+
+        void ShowSnackbar()
+    {
+        _snackbar.Add("Random message");
+    }
+
+
+    private async Task DeleteRoom(string id)
+    {
+
+        var parameters = new DialogParameters
+        {
+            {"ContentText", "Do you really want to delete these records? This process cannot be undone."},
+            {"ButtonText", "Delete"},
+            {"Color", Color.Error}
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = _dialogService.Show<DialogTemplateExample_Dialog>("Delete", parameters, options);
+        
+        var result = await dialog.Result;
+        if(!result.Canceled)
+        {
+            await _roomData.DeleteRoom(id);
+            RoomsList = await _roomData.GetUserRooms(_loggedInUser.Id);
+        }
+    }
+    
+    private void OpenRoom(RoomModel roomModel)
+    { 
+        _navManager.NavigateTo($"/Room/{roomModel.Id}");
+    }
+    private string SetImageSrc(string imageurl)
+    {
+        if (imageurl == null)
+        {
+            return _localizer["Default image path"];
+        }
+        else return imageurl;
+    }
+   
+}

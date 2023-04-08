@@ -1,0 +1,152 @@
+﻿@page "/Track/{id?}"
+@using MusicianAppUI.Components.Dialogs
+@attribute [Authorize]
+@inject AuthenticationStateProvider _authProvider
+@inject IUserData _userData
+@inject IStringLocalizer<App> _localizer
+@inject ITrackData _trackData
+@inject NavigationManager _navManager
+@inject IDialogService _dialogService
+@inject ISnackbar _snackbar
+
+@if (trackModel != null)
+{
+    <MudContainer Class="d-flex flex-column justify-start ma-2">
+        <MudPaper Class="d-flex flex-row justify-end flex-grow-1 gap-4 pa-2" Elevation="0">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="(() => edit=false)"/>
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Primary" OnClick="(e => DeleteTrack(trackModel.Id))" />
+        </MudPaper>
+        
+        <MudPaper Class="d-flex flex-column flex-grow-1 gap-4 pa-2" Elevation="0">
+            <MudText Typo="Typo.h3">@trackModel.Name</MudText>
+            <MudImage Src=@SetImageSrc(trackModel.ImageUrl) Width="100" Height="100" Elevation="25"/>
+            <MudText Typo="Typo.h4">
+            @foreach (var artist in Artists)
+            {
+               @artist.UserDisplayName
+               @space
+            }
+            </MudText>
+        </MudPaper>  
+        
+    <MudDivider />  
+    <MudTextField @bind-Value="trackModel.Chords" Label="Chords" Variant="Variant.Text" Disabled="@edit"></MudTextField>
+    <MudTextField @bind-Value="trackModel.Lyrics" Label="Lyrics" Variant="Variant.Text" Disabled="@edit"></MudTextField>
+    <MudDivider />
+    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Medium" DisableElevation="true" OnClick="(e=>Save())">Create cover track</MudButton>
+</MudContainer>
+}
+@code {
+
+    private string space = " ";
+
+    private bool edit = true;
+
+    private UserModel _loggedInUser;
+
+    [Parameter]
+    public string? id { get; set; }
+
+    private TrackModel trackModel { get; set; } = new();
+
+    private List<ListUserModel> Artists { get; set; } = new();
+
+    protected override async Task OnInitializedAsync(){
+
+        trackModel = await _trackData.GetTrackById(id);
+        Artists = trackModel.Artists;
+        _loggedInUser = await _authProvider.GetUserFromAuth(_userData);
+
+
+
+    }
+    private async Task Save()
+    {
+        var result = trackModel.Artists.Find(t => t.UserId == _loggedInUser.Id);
+        if(result != null && trackModel.Status == "private")
+        {
+            UpdateTrack();
+        }
+        else
+        {
+            CreateCoverTrack();
+        }
+    }
+    async Task UpdateTrack()
+    {
+
+        var parameters = new DialogParameters { ["Track"] = trackModel };
+
+        DialogOptions closeOnEscapeKey = new DialogOptions { CloseOnEscapeKey = true };
+
+        var dialog = _dialogService.Show<EditTrack>("Edit Dialog", parameters, closeOnEscapeKey);
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            var temp = (TrackModel)(result.Data ?? false);
+            await _trackData.UpdateTrack(temp);
+            trackModel = await _trackData.GetTrackById(trackModel.Id);
+        }
+    }
+    async Task CreateCoverTrack()
+    {
+        
+        var cover = trackModel;
+        cover.Artists.Clear();
+        cover.Artists.Add(new ListUserModel(_loggedInUser.Id, _loggedInUser.DisplayName));
+        cover.Type = "cover";
+        cover.OriginalTrackId = trackModel.Id;
+        cover.Status = "private";
+
+        await _trackData.CreateTrack(cover);
+
+        var parameters = new DialogParameters
+        {
+            {"ContentText", "This track was sucessfully added to your covers collection."},
+            {"Color", Color.Primary}
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = _dialogService.Show<DialogTemplateExample_Dialog>("Confirmed", parameters, options);
+    }
+
+    void ShowSnackbar()
+    {
+        _snackbar.Add("Random message");
+    }
+
+
+    private async Task DeleteTrack(string id)
+    {
+
+        var parameters = new DialogParameters
+        {
+            {"ContentText", "Do you really want to delete these records? This process cannot be undone."},
+            {"ButtonText", "Delete"},
+            {"Color", Color.Error}
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = _dialogService.Show<DialogTemplateExample_Dialog>("Delete", parameters, options);
+
+        var result = await dialog.Result;
+        if(!result.Canceled)
+        {
+            await _trackData.DeleteTrack(id);
+        }
+
+    }
+
+    private string SetImageSrc(string imageurl)
+    {
+        if (imageurl == null)
+        {
+            return _localizer["Default image path"];
+        }
+        else return imageurl;
+    }
+
+}

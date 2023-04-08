@@ -1,0 +1,62 @@
+﻿@attribute [Authorize]
+@inject IStringLocalizer<App> Localizer
+@inject AuthenticationStateProvider authProvider
+@inject IUserData userData
+
+<MudNavMenu>
+    @if (_loggedInUser != null)
+    {
+       <MudStack>
+            <MudPaper Class="pa-4">
+                <MudStack Row="true">
+                    <MudAvatar Color="Color.Primary" Size="Size.Medium">@_loggedInUser.DisplayName.Substring(0, 1)</MudAvatar>
+                    <MudStack Justify="Justify.Center" Spacing="0">
+                        <MudText Typo="Typo.body1">@_loggedInUser.DisplayName</MudText>
+                        <MudText Typo="Typo.body2"> @_loggedInUser.Email</MudText>               
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+       </MudStack>
+    }
+    <MudDivider/>
+   
+    <MudNavLink Href="@($"/{_loggedInUser?.Id}")" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+    <MudNavLink Href="/Tracks" Match="NavLinkMatch.Prefix">Tracks</MudNavLink>
+    @if(_loggedInUser!=null)
+    {
+        <MudNavLink Href="@($"/playlists/{_loggedInUser.Id}")" Match="NavLinkMatch.Prefix" >MyPlaylists</MudNavLink>
+        if(_loggedInUser.Type == "artist")
+        {
+            <MudNavLink Href="/Rooms"  Match="NavLinkMatch.Prefix">My rooms</MudNavLink>
+        } 
+    }
+    
+    <MudNavGroup Title="Settings" Expanded="true">
+        
+        
+        <AuthorizeView Policy="Admin">
+        <MudNavLink Href="/Users"  Match="NavLinkMatch.Prefix">Users</MudNavLink>
+       </AuthorizeView>
+        
+        
+        <MudNavLink Href="/security"  Match="NavLinkMatch.Prefix">Security</MudNavLink>
+    </MudNavGroup>
+    <MudNavLink Href="/about"  Match="NavLinkMatch.Prefix">About</MudNavLink>
+
+     <MudStack>
+             <ChooseLanguage/>
+        </MudStack>
+         
+</MudNavMenu>
+
+
+@code {
+    
+    
+    private UserModel? _loggedInUser {get; set;}
+    protected override async Task OnInitializedAsync()
+    {
+        _loggedInUser = await authProvider.GetUserFromAuth(userData);
+    }
+
+}
